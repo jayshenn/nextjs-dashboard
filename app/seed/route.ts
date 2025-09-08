@@ -4,8 +4,7 @@ import { invoices, customers, revenue, users } from '../lib/placeholder-data';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
-async function seedUsers() {
-  await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+async function seedUsers(sql: any) {
   await sql`
     CREATE TABLE IF NOT EXISTS users (
       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -29,9 +28,7 @@ async function seedUsers() {
   return insertedUsers;
 }
 
-async function seedInvoices() {
-  await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-
+async function seedInvoices(sql: any) {
   await sql`
     CREATE TABLE IF NOT EXISTS invoices (
       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -55,9 +52,7 @@ async function seedInvoices() {
   return insertedInvoices;
 }
 
-async function seedCustomers() {
-  await sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
-
+async function seedCustomers(sql: any) {
   await sql`
     CREATE TABLE IF NOT EXISTS customers (
       id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -80,7 +75,7 @@ async function seedCustomers() {
   return insertedCustomers;
 }
 
-async function seedRevenue() {
+async function seedRevenue(sql: any) {
   await sql`
     CREATE TABLE IF NOT EXISTS revenue (
       month VARCHAR(4) NOT NULL UNIQUE,
@@ -103,12 +98,16 @@ async function seedRevenue() {
 
 export async function GET() {
   try {
-    const result = await sql.begin((sql) => [
-      seedUsers(),
-      seedCustomers(),
-      seedInvoices(),
-      seedRevenue(),
-    ]);
+    await sql.begin(async (tx) => {
+      // 创建必要的扩展
+      await tx`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`;
+      
+      // 按顺序执行种子数据函数
+      await seedUsers(tx);
+      await seedCustomers(tx);
+      await seedInvoices(tx);
+      await seedRevenue(tx);
+    });
 
     return Response.json({ message: 'Database seeded successfully' });
   } catch (error) {
